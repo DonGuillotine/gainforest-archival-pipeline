@@ -24,7 +24,7 @@ DEFAULT_ECOCERT_IDS = [
     "42220-0x16bA53B74c234C870c61EFC04cD418B8f2865959-32667107224410092492483962313449748299776",
     "42220-0x16bA53B74c234C870c61EFC04cD418B8f2865959-33007389591331030955947336920881516511232",
     "42220-0x16bA53B74c234C870c61EFC04cD418B8f2865959-33687954325172907882874086135745052934144",
-    "42220-0x16bA53B74c234C870c61EFC04cD418B8f2865959-35389366159777600200190959172903893991424"
+    "42220-0x16bA53B74c234C870c61EFC04cD418B8f2865959-35389366159777600200190959172903893991424",
 ]
 
 
@@ -322,6 +322,170 @@ def test(ctx):
     else:
         console.print("\n[bold red]Some tests failed. Please check configuration.[/bold red]")
         sys.exit(1)
+
+
+@cli.command()
+@click.option(
+    '--ecocert-id',
+    help='Specific ecocert ID to query'
+)
+@click.option(
+    '--test-all',
+    is_flag=True,
+    help='Test with all default ecocert IDs'
+)
+@click.pass_context
+def query(ctx, ecocert_id, test_all):
+    """Query ecocert data and extract external links"""
+    from src.core.graphql_client import EcocertQueryService
+    from src.security.validator import URLValidator
+    from rich.tree import Tree
+
+    settings = ctx.obj['settings']
+    logger = ctx.obj['logger']
+
+    # Initialize services
+    query_service = EcocertQueryService()
+    url_validator = URLValidator()
+
+    # Determine which ecocerts to query
+    if test_all:
+        ecocert_ids = DEFAULT_ECOCERT_IDS
+        console.print(f"[bold]Testing query with {len(ecocert_ids)} ecocerts[/bold]")
+    elif ecocert_id:
+        ecocert_ids = [ecocert_id]
+    else:
+        console.print("[bold red]Error: Specify --ecocert-id or use --test-all[/bold red]")
+        return
+
+    # Query each ecocert
+    with console.status("[bold green]Querying ecocerts...") as status:
+        for eco_id in ecocert_ids:
+            status.update(f"Querying {eco_id[:40]}...")
+
+            try:
+                # Query ecocert data
+                ecocert_data = query_service.query_ecocert(eco_id)
+
+                if ecocert_data:
+                    # Display results
+                    console.print(f"\n[bold green]SUCCESS Ecocert: {eco_id}[/bold green]")
+                    console.print(f"  Attestation UID: {ecocert_data.attestation_uid}")
+                    console.print(f"  Total Links: {ecocert_data.total_links}")
+
+                    if ecocert_data.external_links:
+                        # Create tree view of links
+                        tree = Tree(f"[bold]External Links ({len(ecocert_data.external_links)})[/bold]")
+
+                        for link in ecocert_data.external_links:
+                            # Validate URL
+                            is_valid, error = url_validator.validate_url(link.url)
+
+                            # Create link node
+                            link_text = f"{link.url[:60]}..." if len(link.url) > 60 else link.url
+                            status_emoji = "✓" if is_valid else "✗"
+                            color = "green" if is_valid else "red"
+
+                            link_node = tree.add(f"[{color}]{status_emoji}[/{color}] {link_text}")
+
+                            # Add details
+                            if link.link_type:
+                                link_node.add(f"Type: {link.link_type}")
+                            if link.description:
+                                link_node.add(f"Description: {link.description}")
+                            if not is_valid and error:
+                                link_node.add(f"[red]Error: {error}[/red]")
+
+                            # Add resource info
+                            resource_info = url_validator.extract_resource_id(link.url)
+                            if resource_info:
+                                link_node.add(f"Resource: {resource_info['type']} ({resource_info['id'][:20]}...)")
+
+                        console.print(tree)
+                    else:
+                        console.print("  [yellow]No external links found[/yellow]")
+
+                    # Show metadata summary
+                    if ecocert_data.metadata.get("hypercert"):
+                        hypercert = ecocert_data.metadata["hypercert"]
+                        console.print(f"\n  [dim]Hypercert ID: {hypercert.get('id')}[/dim]")
+                        if hypercert.get("metadata"):
+                            meta = hypercert["metadata"]
+                            if isinstance(meta, dict):
+                                console.print(f"  [dim]Name: {meta.get('name', 'N/A')}[/dim]")
+
+                else:
+                    console.print(f"[yellow]⚠ No data found for: {eco_id}[/yellow]")
+
+            except Exception as e:
+                console.print(f"[red]✗ Failed to query {eco_id}: {e}[/red]")
+                logger.error(f"Query failed for {eco_id}: {e}", exc_info=True)
+
+    console.print("\n[bold green]Query testing completed![/bold green]")
+
+
+@cli.command()
+@click.option(
+    '--url',
+    multiple=True,
+    help='URLs to validate'
+)
+@click.option(
+    '--file',
+    type=click.Path(exists=True),
+    help='File containing URLs (one per line)'
+)
+@click.pass_context
+def validate_urls(ctx, url, file):
+    """Validate URLs against security rules"""
+    from src.security.validator import URLValidator
+
+    logger = ctx.obj['logger']
+
+    # Collect URLs
+    urls_to_validate = list(url)
+
+    if file:
+        with open(file, 'r') as f:
+            urls_to_validate.extend([line.strip() for line in f if line.strip()])
+
+    if not urls_to_validate:
+        console.print("[bold red]Error: No URLs provided[/bold red]")
+        console.print("Use --url or --file option")
+        return
+
+    # Initialize validator
+    validator = URLValidator()
+
+    console.print(f"[bold]Validating {len(urls_to_validate)} URLs[/bold]\n")
+
+    # Validate URLs
+    results = validator.batch_validate_urls(urls_to_validate)
+
+    # Display results
+    valid_count = 0
+    invalid_count = 0
+
+    for url, result in results.items():
+        if result["is_valid"]:
+            valid_count += 1
+            console.print(f"[green]✓[/green] {url}")
+
+            if result.get("resource"):
+                resource = result["resource"]
+                console.print(f"  └─ {resource['type']}: {resource['id']}")
+
+            if not result.get("is_accessible", True):
+                console.print(f"  [yellow]⚠ Warning: {result.get('accessibility_error')}[/yellow]")
+        else:
+            invalid_count += 1
+            console.print(f"[red]✗[/red] {url}")
+            console.print(f"  └─ [red]{result['error']}[/red]")
+
+    # Summary
+    console.print(f"\n[bold]Summary:[/bold]")
+    console.print(f"  Valid URLs: [green]{valid_count}[/green]")
+    console.print(f"  Invalid URLs: [red]{invalid_count}[/red]")
 
 
 if __name__ == "__main__":
