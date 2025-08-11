@@ -61,15 +61,9 @@ cp .env.example .env
 python -m src.main init
 
 ```
+<img width="1353" height="843" alt="Screenshot 2025-08-11 102048" src="https://github.com/user-attachments/assets/2f5b4fd4-c2ae-46d7-915a-f8bd97d0a869" />
 
 ## Usage
-
-### Initialize Database
-
-```bash
-python -m src.main init
-
-```
 
 ### Archive Ecocerts
 
@@ -95,6 +89,8 @@ python -m src.main status
 python -m src.main status --ecocert-id "YOUR_ECOCERT_ID"
 
 ```
+<img width="987" height="213" alt="Screenshot 2025-08-11 104012" src="https://github.com/user-attachments/assets/cf020f63-80fe-48ae-8d7c-4104b795e87b" />
+
 
 ### Run Tests
 
@@ -102,6 +98,8 @@ python -m src.main status --ecocert-id "YOUR_ECOCERT_ID"
 python -m src.main test
 
 ```
+<img width="989" height="294" alt="Screenshot 2025-08-11 104036" src="https://github.com/user-attachments/assets/351fcc98-6133-4e72-aa9f-149668bb0a0d" />
+
 
 ## Configuration
 
