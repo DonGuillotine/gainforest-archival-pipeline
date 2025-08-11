@@ -2,7 +2,7 @@
 Configuration settings for the GainForest Archival Pipeline
 """
 from pydantic_settings import BaseSettings
-from pydantic import Field, validator
+from pydantic import Field, field_validator, ConfigDict
 from typing import List, Optional, Dict, Any
 from pathlib import Path
 import os
@@ -108,16 +108,18 @@ class Settings(BaseSettings):
     )
     APP_VERSION: str = Field(default="1.0.0", description="Application version")
 
-    @validator("DATA_DIR", "LOGS_DIR", pre=True)
-    def resolve_paths(cls, v, values):
+    @field_validator("DATA_DIR", "LOGS_DIR", mode="before")
+    @classmethod
+    def resolve_paths(cls, v, info):
         """Resolve relative paths to absolute paths"""
         if isinstance(v, str):
             v = Path(v)
-        if not v.is_absolute() and "PROJECT_ROOT" in values:
-            return values["PROJECT_ROOT"] / v
+        if not v.is_absolute() and info.data and "PROJECT_ROOT" in info.data:
+            return info.data["PROJECT_ROOT"] / v
         return v
 
-    @validator("ALLOWED_DOMAINS", pre=True)
+    @field_validator("ALLOWED_DOMAINS", mode="before")
+    @classmethod
     def parse_domains(cls, v):
         """Parse comma-separated domains if provided as string"""
         if isinstance(v, str):
@@ -129,12 +131,12 @@ class Settings(BaseSettings):
         self.DATA_DIR.mkdir(parents=True, exist_ok=True)
         self.LOGS_DIR.mkdir(parents=True, exist_ok=True)
 
-    class Config:
-        """Pydantic configuration"""
-        env_file = ".env"
-        env_file_encoding = "utf-8"
-        case_sensitive = True
-        extra = "ignore"
+    model_config = ConfigDict(
+        env_file=".env",
+        env_file_encoding="utf-8",
+        case_sensitive=True,
+        extra="ignore"
+    )
 
     def to_dict(self) -> Dict[str, Any]:
         """Convert settings to dictionary for logging"""
