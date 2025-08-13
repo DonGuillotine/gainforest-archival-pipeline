@@ -98,6 +98,7 @@ class ExternalLink:
     description: Optional[str] = None
     link_type: Optional[str] = None
     source_field: Optional[str] = None
+    metadata: Dict[str, Any] = field(default_factory=dict)
 
     def detect_content_type(self) -> ContentType:
         """Detect content type from URL"""

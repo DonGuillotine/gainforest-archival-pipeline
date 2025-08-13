@@ -165,6 +165,7 @@ class URLValidator:
         patterns = [
             r'drive\.google\.com/file/d/([a-zA-Z0-9_-]+)',
             r'drive\.google\.com/open\?id=([a-zA-Z0-9_-]+)',
+            r'drive\.google\.com/drive/folders/([a-zA-Z0-9_-]+)',
             r'docs\.google\.com/document/d/([a-zA-Z0-9_-]+)',
             r'docs\.google\.com/spreadsheets/d/([a-zA-Z0-9_-]+)',
             r'docs\.google\.com/presentation/d/([a-zA-Z0-9_-]+)',
@@ -217,6 +218,7 @@ class URLValidator:
         drive_patterns = [
             (r'drive\.google\.com/file/d/([a-zA-Z0-9_-]+)', 'google_drive_file'),
             (r'drive\.google\.com/open\?id=([a-zA-Z0-9_-]+)', 'google_drive_file'),
+            (r'drive\.google\.com/drive/folders/([a-zA-Z0-9_-]+)', 'google_drive_folder'),
             (r'docs\.google\.com/document/d/([a-zA-Z0-9_-]+)', 'google_docs'),
             (r'docs\.google\.com/spreadsheets/d/([a-zA-Z0-9_-]+)', 'google_sheets'),
             (r'docs\.google\.com/presentation/d/([a-zA-Z0-9_-]+)', 'google_slides'),
