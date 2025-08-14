@@ -752,5 +752,90 @@ def archive_to_ipfs(ctx, ecocert_id, test_pipeline):
         console.print(f"Total Size: {stats['ipfs_usage']['pin_size_total_mb']:.2f} MB")
 
 
+@cli.command()
+@click.option(
+    '--dry-run',
+    is_flag=True,
+    help='Test run without actual archival'
+)
+@click.pass_context
+def run_all(ctx, dry_run):
+    """Process all 9 ecocerts - main pipeline execution"""
+    from src.pipeline.main_pipeline import MainPipeline
+    from rich.table import Table
+    from rich.panel import Panel
+    import json
+
+    settings = ctx.obj['settings']
+    logger = ctx.obj['logger']
+
+    console.print(Panel.fit(
+        "[bold cyan]GainForest Archival Pipeline[/bold cyan]\n"
+        "Processing 9 ecocerts with immutable IPFS storage",
+        title="Starting Pipeline",
+        border_style="cyan"
+    ))
+
+    if dry_run:
+        console.print("[yellow]DRY RUN MODE - No actual archival[/yellow]\n")
+
+    # Initialize and run pipeline
+    pipeline = MainPipeline()
+
+    with console.status("[bold green]Processing ecocerts...") as status:
+        results = pipeline.run_all_ecocerts()
+
+    # Display results
+    console.print("\n[bold green]✓ Pipeline Complete![/bold green]\n")
+
+    # Summary table
+    summary_table = Table(title="Pipeline Summary", show_header=True, header_style="bold cyan")
+    summary_table.add_column("Metric", style="cyan")
+    summary_table.add_column("Value", justify="right")
+
+    summary_table.add_row("Total Ecocerts", str(results['total_ecocerts']))
+    summary_table.add_row("Successful Ecocerts", f"[green]{results['successful_ecocerts']}[/green]")
+    summary_table.add_row("Failed Ecocerts", f"[red]{results['failed_ecocerts']}[/red]")
+    summary_table.add_row("", "")  # Separator
+    summary_table.add_row("Total Links Found", str(results['total_links_found']))
+    summary_table.add_row("Links Archived", f"[green]{results['total_links_archived']}[/green]")
+    summary_table.add_row("Links Failed", f"[red]{results['total_links_failed']}[/red]")
+    summary_table.add_row("", "")  # Separator
+    summary_table.add_row("Unique IPFS Hashes", str(len(set(results['all_ipfs_hashes']))))
+    summary_table.add_row("Processing Time", f"{results['total_time_seconds']:.2f} seconds")
+
+    console.print(summary_table)
+
+    # Database summary
+    if 'database_summary' in results:
+        db_summary = results['database_summary']
+        console.print(f"\n[bold]Database Summary:[/bold]")
+        console.print(f"  Total Archives: {db_summary['total_archives']}")
+        console.print(f"  Total Size: {db_summary['total_size_mb']:.2f} MB")
+        console.print(f"  Unique Files: {db_summary['unique_files']}")
+
+    # Per-ecocert results
+    console.print("\n[bold]Per-Ecocert Results:[/bold]")
+    for eco_result in results['ecocerts_processed']:
+        status_icon = "✓" if eco_result['success'] else "✗"
+        status_color = "green" if eco_result['success'] else "red"
+
+        console.print(f"  [{status_color}]{status_icon}[/{status_color}] {eco_result['ecocert_id'][:50]}...")
+        console.print(f"      Links: {eco_result['links_archived']}/{eco_result['links_found']} archived")
+
+        if eco_result['ipfs_hashes']:
+            console.print(f"      IPFS: {eco_result['ipfs_hashes'][0][:20]}...")
+
+        if eco_result['error']:
+            console.print(f"      [red]Error: {eco_result['error']}[/red]")
+
+    # Save results to file
+    output_file = Path("pipeline_results.json")
+    with open(output_file, 'w') as f:
+        json.dump(results, f, indent=2, default=str)
+
+    console.print(f"\n[dim]Full results saved to {output_file}[/dim]")
+
+
 if __name__ == "__main__":
     cli()

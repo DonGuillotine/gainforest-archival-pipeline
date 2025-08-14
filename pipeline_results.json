@@ -1,0 +1,124 @@
+{
+  "start_time": "2025-08-14T09:30:31.121297+00:00",
+  "ecocerts_processed": [
+    {
+      "ecocert_id": "42220-0x16bA53B74c234C870c61EFC04cD418B8f2865959-31305977756726338638630463883722675453952",
+      "success": false,
+      "links_found": 0,
+      "links_archived": 0,
+      "links_failed": 0,
+      "ipfs_hashes": [],
+      "error": null
+    },
+    {
+      "ecocert_id": "42220-0x16bA53B74c234C870c61EFC04cD418B8f2865959-31646260123647277102093838491154443665408",
+      "success": true,
+      "links_found": 1,
+      "links_archived": 1,
+      "links_failed": 0,
+      "ipfs_hashes": [
+        "bafybeiar6tfpky7b4hypwlgjz2id6hrgsguvtlugs5hobsswrbkxbrfvxa"
+      ],
+      "error": null
+    },
+    {
+      "ecocert_id": "42220-0x16bA53B74c234C870c61EFC04cD418B8f2865959-31986542490568215565557213098586211876864",
+      "success": false,
+      "links_found": 0,
+      "links_archived": 0,
+      "links_failed": 0,
+      "ipfs_hashes": [],
+      "error": null
+    },
+    {
+      "ecocert_id": "42220-0x16bA53B74c234C870c61EFC04cD418B8f2865959-42875578232038246396385200536402794643456",
+      "success": true,
+      "links_found": 1,
+      "links_archived": 1,
+      "links_failed": 0,
+      "ipfs_hashes": [
+        "bafybeic5uuwhmdb4syodwqhnylkgbcqm5znwbux4r7gpd4bysfubbjzg3a"
+      ],
+      "error": null
+    },
+    {
+      "ecocert_id": "42220-0x16bA53B74c234C870c61EFC04cD418B8f2865959-32326824857489154029020587706017980088320",
+      "success": false,
+      "links_found": 0,
+      "links_archived": 0,
+      "links_failed": 0,
+      "ipfs_hashes": [],
+      "error": null
+    },
+    {
+      "ecocert_id": "42220-0x16bA53B74c234C870c61EFC04cD418B8f2865959-32667107224410092492483962313449748299776",
+      "success": true,
+      "links_found": 3,
+      "links_archived": 2,
+      "links_failed": 1,
+      "ipfs_hashes": [
+        "bafybeibtcjb7f63lbi7vmqzqjxasho66rgsuv3fnn7pm3pfjspsmyhmmiy",
+        "bafybeibhqvr7ve6qod6sy5gtawiwfrri6lndyh7qcopv2yj3uxal3f6vaq"
+      ],
+      "error": null
+    },
+    {
+      "ecocert_id": "42220-0x16bA53B74c234C870c61EFC04cD418B8f2865959-33007389591331030955947336920881516511232",
+      "success": true,
+      "links_found": 1,
+      "links_archived": 1,
+      "links_failed": 0,
+      "ipfs_hashes": [
+        "bafybeigrmix5aja7cox4swtmxmkloylo6fqlcyxjkkqhixrt2ensz334rm"
+      ],
+      "error": null
+    },
+    {
+      "ecocert_id": "42220-0x16bA53B74c234C870c61EFC04cD418B8f2865959-33687954325172907882874086135745052934144",
+      "success": true,
+      "links_found": 1,
+      "links_archived": 1,
+      "links_failed": 0,
+      "ipfs_hashes": [
+        "bafybeigonbjqoou2qsp4qfu45kweqtbsschb57aezwhwizoyia4g6qg5ii"
+      ],
+      "error": null
+    },
+    {
+      "ecocert_id": "42220-0x16bA53B74c234C870c61EFC04cD418B8f2865959-35389366159777600200190959172903893991424",
+      "success": false,
+      "links_found": 0,
+      "links_archived": 0,
+      "links_failed": 0,
+      "ipfs_hashes": [],
+      "error": null
+    }
+  ],
+  "total_ecocerts": 9,
+  "successful_ecocerts": 5,
+  "failed_ecocerts": 4,
+  "total_links_found": 7,
+  "total_links_archived": 6,
+  "total_links_failed": 1,
+  "all_ipfs_hashes": [
+    "bafybeiar6tfpky7b4hypwlgjz2id6hrgsguvtlugs5hobsswrbkxbrfvxa",
+    "bafybeic5uuwhmdb4syodwqhnylkgbcqm5znwbux4r7gpd4bysfubbjzg3a",
+    "bafybeibtcjb7f63lbi7vmqzqjxasho66rgsuv3fnn7pm3pfjspsmyhmmiy",
+    "bafybeibhqvr7ve6qod6sy5gtawiwfrri6lndyh7qcopv2yj3uxal3f6vaq",
+    "bafybeigrmix5aja7cox4swtmxmkloylo6fqlcyxjkkqhixrt2ensz334rm",
+    "bafybeigonbjqoou2qsp4qfu45kweqtbsschb57aezwhwizoyia4g6qg5ii"
+  ],
+  "database_summary": {
+    "total_ecocerts": 5,
+    "total_archives": 10,
+    "total_size_bytes": 143924072,
+    "total_size_mb": 137.2566909790039,
+    "unique_files": 6,
+    "status_breakdown": {
+      "completed": 8,
+      "failed": 1
+    }
+  },
+  "end_time": "2025-08-14T09:39:00.298856+00:00",
+  "total_time_seconds": 509.17758202552795
+}

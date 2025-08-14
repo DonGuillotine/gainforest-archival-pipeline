@@ -65,6 +65,19 @@ python -m src.main init
 
 ## Usage
 
+### Process all 9 ecocerts (Main Command)
+
+```bash
+python -m src.main run-all
+```
+
+This will:
+1. Query each ecocert from Hypercerts/EAS
+2. Extract external links from attestations
+3. Download content from Google Drive/YouTube
+4. Upload to IPFS via Pinata
+5. Store IPFS hashes in database
+
 ### Archive Ecocerts
 
 ```bash
