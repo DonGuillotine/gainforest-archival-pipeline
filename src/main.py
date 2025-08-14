@@ -1,17 +1,17 @@
 """
 Main CLI entry point for the GainForest Archival Pipeline
 """
-import click
 import sys
+from pathlib import Path
+
+import click
 from rich.console import Console
-from rich.table import Table
-from rich.progress import Progress, SpinnerColumn, TextColumn
 from rich.panel import Panel
-from rich import print as rprint
+from rich.progress import Progress, SpinnerColumn, TextColumn
+from rich.table import Table
 
 from src.config import get_settings, setup_logging
 from src.core.database import DatabaseManager, ProcessingStatusEnum
-from src.core.models import ProcessingStatus
 
 console = Console()
 
@@ -594,6 +594,162 @@ def download(ctx, url, google_drive_test, youtube_test):
     # Cleanup
     manager.cleanup_temp_files()
     console.print("\n[bold green]Download testing complete![/bold green]")
+
+
+@cli.command()
+@click.option(
+    '--file',
+    type=click.Path(exists=True),
+    help='File to upload to IPFS'
+)
+@click.option(
+    '--test-auth',
+    is_flag=True,
+    help='Test Pinata authentication'
+)
+@click.pass_context
+def ipfs(ctx, file, test_auth):
+    """Test IPFS/Pinata integration"""
+    from src.storage.ipfs_client import PinataClient
+
+    settings = ctx.obj['settings']
+    logger = ctx.obj['logger']
+
+    # Initialize Pinata client
+    pinata = PinataClient()
+
+    if test_auth:
+        console.print("[bold]Testing Pinata Authentication[/bold]")
+
+        if pinata.test_authentication():
+            console.print("[green]✓ Authentication successful![/green]")
+
+            # Get usage stats
+            stats = pinata.get_usage_stats()
+            if stats:
+                console.print(f"Pin Count: {stats.get('pin_count', 0)}")
+                console.print(f"Total Size: {stats.get('pin_size_total', 0) / (1024 * 1024):.2f} MB")
+        else:
+            console.print("[red]✗ Authentication failed![/red]")
+            console.print("Please check your PINATA_API_KEY and PINATA_SECRET_API_KEY in .env")
+        return
+
+    if file:
+        file_path = Path(file)
+        console.print(f"[bold]Uploading to IPFS: {file_path.name}[/bold]")
+
+        # Upload file
+        with console.status("[green]Uploading...") as status:
+            response = pinata.pin_file_to_ipfs(
+                file_path=file_path,
+                pin_name=file_path.stem,
+                metadata={"test_upload": "true"}
+            )
+
+            if response.success:
+                console.print(f"[green]✓ Upload successful![/green]")
+                console.print(f"IPFS Hash: {response.ipfs_hash}")
+                console.print(f"Pin Size: {response.pin_size} bytes")
+                console.print(f"Gateway URL: {response.gateway_url}")
+
+                # Verify pin
+                if pinata.verify_pin(response.ipfs_hash):
+                    console.print("[green]✓ Pin verified![/green]")
+            else:
+                console.print(f"[red]✗ Upload failed: {response.error}[/red]")
+    else:
+        console.print("Use --test-auth to test authentication or --file to upload a file")
+
+
+@cli.command()
+@click.option(
+    '--ecocert-id',
+    help='Process specific ecocert ID'
+)
+@click.option(
+    '--test-pipeline',
+    is_flag=True,
+    help='Test complete pipeline with sample data'
+)
+@click.pass_context
+def archive_to_ipfs(ctx, ecocert_id, test_pipeline):
+    """Complete archival pipeline: Query → Download → IPFS → Database"""
+    from src.core.graphql_client import EcocertQueryService
+    from src.storage.archive_manager import ArchiveManager
+    from rich.progress import Progress, SpinnerColumn, TextColumn
+    from rich.panel import Panel
+
+    settings = ctx.obj['settings']
+    logger = ctx.obj['logger']
+
+    if test_pipeline:
+        # Use first default ecocert for testing
+        ecocert_id = DEFAULT_ECOCERT_IDS[1]
+        console.print("[yellow]Testing pipeline with first default ecocert[/yellow]")
+
+    if not ecocert_id:
+        console.print("[red]Error: Specify --ecocert-id or use --test-pipeline[/red]")
+        return
+
+    console.print(Panel.fit(
+        f"[bold cyan]Archiving Ecocert to IPFS[/bold cyan]\n"
+        f"ID: {ecocert_id[:50]}...",
+        title="Archive Pipeline",
+        border_style="cyan"
+    ))
+
+    # Initialize services
+    query_service = EcocertQueryService()
+    archive_manager = ArchiveManager()
+
+    with Progress(
+            SpinnerColumn(),
+            TextColumn("[progress.description]{task.description}"),
+            console=console
+    ) as progress:
+
+        # Step 1: Query ecocert
+        task = progress.add_task("Querying ecocert data...")
+        ecocert_data = query_service.query_ecocert(ecocert_id)
+
+        if not ecocert_data:
+            console.print("[red]✗ Failed to query ecocert data[/red]")
+            return
+
+        console.print(f"[green]✓ Found {len(ecocert_data.external_links)} external links[/green]")
+
+        # Step 2: Archive links
+        task = progress.add_task("Archiving links to IPFS...")
+
+        results = archive_manager.archive_ecocert_links(
+            ecocert_id=ecocert_data.ecocert_id,
+            attestation_uid=ecocert_data.attestation_uid,
+            links=ecocert_data.external_links
+        )
+
+    # Display results
+    console.print("\n[bold]Archive Results:[/bold]")
+    console.print(f"Total Links: {results['total_links']}")
+    console.print(f"[green]Successful: {results['successful']}[/green]")
+    console.print(f"[red]Failed: {results['failed']}[/red]")
+
+    if results['archived_content']:
+        console.print("\n[bold]Archived Content:[/bold]")
+        for content in results['archived_content']:
+            console.print(f"  • {content['url'][:50]}...")
+            console.print(f"    IPFS: {content['ipfs_hash']}")
+            console.print(f"    Gateway: {settings.IPFS_GATEWAY_URL}{content['ipfs_hash']}")
+
+    # Show statistics
+    stats = archive_manager.get_archive_statistics()
+    console.print(f"\n[bold]Database Statistics:[/bold]")
+    console.print(f"Total Archived: {stats['total_archived_content']}")
+    console.print(f"Total Size: {stats['total_file_size_bytes'] / (1024 * 1024):.2f} MB")
+
+    if 'ipfs_usage' in stats:
+        console.print(f"\n[bold]IPFS Statistics:[/bold]")
+        console.print(f"Total Pins: {stats['ipfs_usage']['pin_count']}")
+        console.print(f"Total Size: {stats['ipfs_usage']['pin_size_total_mb']:.2f} MB")
 
 
 if __name__ == "__main__":
