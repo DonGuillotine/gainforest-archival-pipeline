@@ -71,6 +71,9 @@ python -m src.main init
 python -m src.main run-all
 ```
 
+<img width="1821" height="907" alt="image" src="https://github.com/user-attachments/assets/4a090b63-427f-417f-96a1-75ce788490ce" />
+
+
 This will:
 1. Query each ecocert from Hypercerts/EAS
 2. Extract external links from attestations
