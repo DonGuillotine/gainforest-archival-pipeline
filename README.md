@@ -116,6 +116,14 @@ python -m src.main test
 ```
 <img width="989" height="294" alt="Screenshot 2025-08-11 104036" src="https://github.com/user-attachments/assets/351fcc98-6133-4e72-aa9f-149668bb0a0d" />
 
+### Unit Run Tests
+
+```bash
+pytest tests -v
+
+```
+<img width="1839" height="817" alt="image" src="https://github.com/user-attachments/assets/1d435b69-6838-4dd0-abd2-e976a2f9af97" />
+
 
 ## Configuration
 
@@ -132,15 +140,33 @@ Key settings in `.env`:
 ```
 gainforest-archival-pipeline/
 ├── src/
-│   ├── config/          # Configuration and settings
-│   ├── core/            # Database and models
-│   ├── handlers/        # Content handlers
-│   ├── security/        # Validation and sanitization
-│   ├── storage/         # IPFS integration
-│   └── main.py          # CLI entry point
-├── data/                # SQLite database
-├── logs/                # Application logs
-└── tests/               # Test suite
+│   ├── config/              # Configuration and settings
+│   │   ├── settings.py      # Pydantic settings management
+│   │   └── logging_config.py # Logging configuration
+│   ├── core/                # Core functionality
+│   │   ├── database.py      # Database management
+│   │   ├── graphql_client.py # GraphQL queries for Hypercerts/EAS
+│   │   └── models.py        # Data models
+│   ├── handlers/            # Content download handlers
+│   │   ├── google_drive.py  # Google Drive/Docs downloader
+│   │   └── youtube.py       # YouTube video downloader
+│   ├── security/            # Security validation
+│   │   ├── validator.py     # URL validation
+│   │   └── sanitizer.py     # Input sanitization
+│   ├── storage/             # IPFS integration
+│   │   └── ipfs_client.py   # Pinata API client
+│   ├── pipeline/            # Main pipeline
+│   │   └── main_pipeline.py # Orchestrates entire process
+│   └── main.py              # CLI entry point
+├── data/
+│   └── archive.db           # SQLite database
+├── downloads/               # Downloaded content
+│   ├── temp/               # Temporary files
+│   └── completed/          # Validated content
+├── logs/                   # Application logs
+├── .env                    # Environment variables (create from .env.example)
+├── requirements.txt        # Python dependencies
+└── README.md              # This file
 
 ```
 
