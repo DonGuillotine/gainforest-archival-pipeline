@@ -204,6 +204,14 @@ python -m src.main --debug archive --use-defaults
 
 ```
 
+# Complete CLI Command Reference
+
+**Want to explore every available command for the **GainForest Archival Pipeline**?**  
+**I have prepared a detailed list for you!**  
+
+# 👉 [See the full CLI Commands list here](https://gist.github.com/DonGuillotine/be001ea0506834f9de8cda35343ce8b9)
+
+
 ## License
 
 MIT License - See LICENSE file for details
