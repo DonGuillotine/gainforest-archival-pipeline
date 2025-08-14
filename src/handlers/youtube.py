@@ -23,9 +23,16 @@ class YouTubeHandler(BaseContentHandler):
         """Initialize YouTube handler"""
         super().__init__()
 
-        # yt-dlp options for downloading
+        # yt-dlp options for downloading with more robust format selection
         self.ydl_opts = {
-            'format': 'best[height<=720]/best[height<=1080]/best',  # More flexible format selection
+            # More flexible format selection with multiple fallbacks
+            'format': (
+                'best[height<=720][filesize<50M]/'  # Prefer 720p under 50MB
+                'best[height<=480][filesize<30M]/'  # Fallback to 480p under 30MB
+                'best[height<=360][filesize<20M]/'  # Fallback to 360p under 20MB
+                'worst[height>=240]/'               # Accept any quality 240p or above
+                'best'                              # Final fallback to any available format
+            ),
             'outtmpl': str(self.temp_dir / '%(id)s.%(ext)s'),
             'quiet': True,
             'no_warnings': True,
@@ -46,6 +53,10 @@ class YouTubeHandler(BaseContentHandler):
             'writeautomaticsub': False,
             'writedescription': False,
             'writeinfojson': False,
+            # Additional options for better compatibility
+            'ignoreerrors': False,  # Don't ignore errors - we want to handle them
+            'force_json': False,
+            'prefer_free_formats': True,  # Prefer free formats when available
         }
 
         # Maximum video duration (30 minutes)
@@ -287,7 +298,7 @@ class YouTubeHandler(BaseContentHandler):
 
     def _download_video(self, url: str, video_info: Dict[str, Any]) -> Optional[Path]:
         """
-        Download video using yt-dlp
+        Download video using yt-dlp with fallback format strategies
 
         Args:
             url: YouTube URL
@@ -296,29 +307,68 @@ class YouTubeHandler(BaseContentHandler):
         Returns:
             Optional[Path]: Path to downloaded file
         """
-        try:
-            with yt_dlp.YoutubeDL(self.ydl_opts) as ydl:
-                ydl.download([url])
+        # Try multiple format strategies in order of preference
+        format_strategies = [
+            # Primary strategy (as defined in __init__)
+            self.ydl_opts['format'],
+            # Fallback strategies with increasing simplicity
+            'best[height<=480]/best[height<=720]/best',
+            'best[filesize<50M]/best[filesize<100M]/best',
+            'worstvideo+bestaudio/best',
+            'worst',  # Final fallback - any available format
+        ]
+        
+        video_id = video_info.get('id')
+        
+        for strategy_idx, format_selector in enumerate(format_strategies):
+            try:
+                # Create modified options for this strategy
+                current_opts = self.ydl_opts.copy()
+                current_opts['format'] = format_selector
+                
+                if strategy_idx > 0:
+                    logger.info(f"Trying fallback format strategy {strategy_idx + 1}: {format_selector}")
+                
+                with yt_dlp.YoutubeDL(current_opts) as ydl:
+                    ydl.download([url])
 
-                # Find the downloaded file
-                video_id = video_info.get('id')
+                    # Find the downloaded file
+                    # Look for the file with video ID
+                    for file in self.temp_dir.glob(f"{video_id}.*"):
+                        if file.is_file():
+                            if strategy_idx > 0:
+                                logger.info(f"Successfully downloaded with fallback strategy {strategy_idx + 1}")
+                            return file
 
-                # Look for the file with video ID
-                for file in self.temp_dir.glob(f"{video_id}.*"):
-                    if file.is_file():
-                        return file
+                    # If not found by ID, look for any recent video file
+                    video_files = list(self.temp_dir.glob("*.mp4")) + list(self.temp_dir.glob("*.webm")) + list(self.temp_dir.glob("*.mkv"))
+                    if video_files:
+                        # Return the most recent file
+                        recent_file = max(video_files, key=lambda f: f.stat().st_mtime)
+                        if strategy_idx > 0:
+                            logger.info(f"Successfully downloaded with fallback strategy {strategy_idx + 1}")
+                        return recent_file
 
-                # If not found by ID, look for any recent video file
-                mp4_files = list(self.temp_dir.glob("*.mp4"))
-                if mp4_files:
-                    # Return the most recent file
-                    return max(mp4_files, key=lambda f: f.stat().st_mtime)
+            except Exception as e:
+                error_msg = str(e).lower()
+                
+                # Check if this is a format availability error
+                if 'requested format is not available' in error_msg or 'no formats found' in error_msg:
+                    logger.warning(f"Format strategy {strategy_idx + 1} failed due to format availability: {format_selector}")
+                    # Continue to next strategy
+                    continue
+                elif 'video is unavailable' in error_msg or 'private video' in error_msg:
+                    # These are permanent failures - don't try other strategies
+                    logger.error(f"Video unavailable or private: {e}")
+                    return None
+                else:
+                    # Other errors - log and try next strategy
+                    logger.warning(f"Format strategy {strategy_idx + 1} failed: {e}")
+                    continue
 
-                return None
-
-        except Exception as e:
-            logger.error(f"yt-dlp download failed: {e}")
-            return None
+        # All strategies failed
+        logger.error(f"All format strategies failed for video {video_id}")
+        return None
 
     def _get_file_extension(self, url: str) -> str:
         """
