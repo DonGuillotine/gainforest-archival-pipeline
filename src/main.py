@@ -488,5 +488,113 @@ def validate_urls(ctx, url, file):
     console.print(f"  Invalid URLs: [red]{invalid_count}[/red]")
 
 
+@cli.command()
+@click.option(
+    '--url',
+    multiple=True,
+    help='URLs to download'
+)
+@click.option(
+    '--google-drive-test',
+    is_flag=True,
+    help='Test with sample Google Drive URL'
+)
+@click.option(
+    '--youtube-test',
+    is_flag=True,
+    help='Test with sample YouTube URL'
+)
+@click.pass_context
+def download(ctx, url, google_drive_test, youtube_test):
+    """Test content download handlers"""
+    from src.handlers.download_manager import DownloadManager
+    from src.handlers.base import DownloadProgress
+    from rich.progress import Progress, BarColumn, TextColumn, TimeRemainingColumn
+
+    settings = ctx.obj['settings']
+    logger = ctx.obj['logger']
+
+    # Collect URLs to download
+    urls_to_download = list(url)
+
+    if google_drive_test:
+        test_url = "https://drive.google.com/file/d/1dPhRO-X6FC8Kv1s3ExfDyNdXkBrd5QTG/view?usp=sharing"
+        urls_to_download.append(test_url)
+        console.print("[yellow]Added test Google Drive URL[/yellow]")
+
+    if youtube_test:
+        # Add a short test YouTube video
+        test_url = "https://www.youtube.com/watch?v=jNQXAC9IVRw"
+        urls_to_download.append(test_url)
+        console.print("[yellow]Added test YouTube URL[/yellow]")
+
+    if not urls_to_download:
+        console.print("[bold red]Error: No URLs specified[/bold red]")
+        console.print("Use --url, --google-drive-test, or --youtube-test")
+        return
+
+    # Initialize download manager
+    manager = DownloadManager()
+
+    console.print(f"\n[bold]Downloading {len(urls_to_download)} files[/bold]")
+
+    # Process each URL
+    for url in urls_to_download:
+        console.print(f"\n[cyan]Downloading: {url}[/cyan]")
+
+        with Progress(
+                TextColumn("[progress.description]{task.description}"),
+                BarColumn(),
+                TextColumn("[progress.percentage]{task.percentage:>3.0f}%"),
+                TimeRemainingColumn(),
+                console=console
+        ) as progress:
+
+            download_task = progress.add_task("Downloading...", total=None)
+
+            def progress_callback(dl_progress: DownloadProgress):
+                # Format size display
+                downloaded_mb = dl_progress.downloaded_bytes / (1024 * 1024)
+                
+                if dl_progress.total_bytes > 0:
+                    # We know the total size - show proper progress bar
+                    total_mb = dl_progress.total_bytes / (1024 * 1024)
+                    progress.update(download_task, total=dl_progress.total_bytes)
+                    progress.update(
+                        download_task,
+                        completed=dl_progress.downloaded_bytes,
+                        description=f"{dl_progress.status}: {downloaded_mb:.1f}MB / {total_mb:.1f}MB"
+                    )
+                else:
+                    # Unknown total size - show indeterminate progress
+                    progress.update(
+                        download_task,
+                        description=f"{dl_progress.status}: {downloaded_mb:.1f}MB"
+                    )
+
+            # Download the content
+            result = manager.download_content(url, progress_callback)
+
+            if result.success:
+                console.print(f"[green]✓ Success![/green]")
+                console.print(f"  File: {result.file_path}")
+                console.print(f"  Size: {result.file_size / (1024 * 1024):.2f} MB")
+                console.print(f"  Type: {result.mime_type}")
+                console.print(f"  Hash: {result.checksum[:16]}...")
+                console.print(f"  Time: {result.download_time:.2f}s")
+
+                if result.metadata:
+                    console.print("  Metadata:")
+                    for key, value in result.metadata.items():
+                        if key != 'original_url':  # Skip long URLs
+                            console.print(f"    {key}: {value}")
+            else:
+                console.print(f"[red]✗ Failed: {result.error}[/red]")
+
+    # Cleanup
+    manager.cleanup_temp_files()
+    console.print("\n[bold green]Download testing complete![/bold green]")
+
+
 if __name__ == "__main__":
     cli()

@@ -3,6 +3,7 @@ requests==2.32.4
 beautifulsoup4==4.13.4
 yt-dlp==2025.07.21
 python-magic==0.4.27
+python-magic-bin==0.4.14
 Pillow==10.4.0
 python-dotenv==1.0.1
 pydantic==2.8.2
