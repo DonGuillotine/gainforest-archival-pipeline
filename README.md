@@ -105,7 +105,8 @@ python -m src.main status
 python -m src.main status --ecocert-id "YOUR_ECOCERT_ID"
 
 ```
-<img width="987" height="213" alt="Screenshot 2025-08-11 104012" src="https://github.com/user-attachments/assets/cf020f63-80fe-48ae-8d7c-4104b795e87b" />
+<img width="1832" height="395" alt="image" src="https://github.com/user-attachments/assets/4f7a4832-9079-4e7c-a173-d31d2389e6a8" />
+
 
 
 ### Run Tests
