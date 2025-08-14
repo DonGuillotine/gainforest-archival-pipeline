@@ -145,12 +145,20 @@ class TestLinkExtractor:
 class TestEcocertQueryService:
     """Test ecocert query service"""
 
-    @patch('src.core.graphql_client.HypercertsClient.get_attestation_uid_from_ecocert')
+    @patch('src.core.graphql_client.HypercertsClient.get_attestation_uids_from_ecocert')
     @patch('src.core.graphql_client.EASClient.get_attestation_by_uid')
-    def test_query_ecocert_success(self, mock_get_attestation, mock_get_uid):
+    def test_query_ecocert_success(self, mock_get_attestation, mock_get_uids):
         """Test successful ecocert query"""
-        # Mock attestation UID retrieval
-        mock_get_uid.return_value = "0xTESTUID123"
+        # Mock attestation UIDs retrieval - return list of attestation info
+        mock_get_uids.return_value = [
+            {
+                "uid": "0xTESTUID123",
+                "schema_uid": "0xSCHEMA123",
+                "data": {},
+                "priority": 100,
+                "hypercert_index": 0
+            }
+        ]
 
         # Mock attestation data
         mock_get_attestation.return_value = {
